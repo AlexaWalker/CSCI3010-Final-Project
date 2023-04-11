@@ -63,6 +63,8 @@ class Player():
             self.velocity[1] = rand.randint(2, 5)
             self.velocity[1] *= -1
 
+        self.tot_vel = math.sqrt(self.velocity[0]**2 + self.velocity[1]**2)
+
 
 def check_collision(p1, p2):
     return (math.sqrt((p2.x-p1.x)**2+(p2.y-p1.y)**2)<=p1.radius+p2.radius)
