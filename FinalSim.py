@@ -37,12 +37,15 @@ class Player():
 
         self.solver = ode(self.f)
         self.solver.set_integrator('dop853')
+
+    def setup(self, p2):
         self.solver.set_initial_value(self.state, self.t)
+        self.solver.set_f_params(p2)
 
     def draw(self, bg, colour):
         pygame.draw.circle(bg, colour, (self.x, self.y), self.radius)
 
-    def f(self, p2):
+    def f(self, state, t, p2):
         v =  ((self.mass-p2.mass)/(self.mass+p2.mass))*self.tot_vel+((2*p2.mass)/(self.mass+p2.mass))*p2.tot_vel
         theta = math.atan((p2.state[1]-self.state[1])/(p2.state[0]-self.state[0]))
         vx = v*math.cos(theta)
@@ -54,7 +57,7 @@ class Player():
     def update(self, p2): 
         new_state = self.solver.integrate(self.t + self.dt)
 
-        if not self.check_collision(new_state):
+        if not self.check_collision(new_state, p2):
             self.state = new_state
             self.t += self.t
 
@@ -99,7 +102,34 @@ class Player():
         return (math.sqrt((p2.state[0]-state[0])**2+(p2.state[1]-state[1])**2)<=self.radius+p2.radius)
         
     def collide(self, state, p2, time):
-        pass
+        fractional_dt = 1.0 
+        dt = 0.0 
+        s0 = state 
+        t0 = time
+        tol_distance = 0.001
+        self.solver.set_initial_value(s0, t0, p2)
+        new_state = self.solver.integrate(t0)
+
+        while(True):
+            
+            if (np.abs(new_state[0])<=p2.state[0] + tol_distance and np.abs(new_state[1] <= p2.state[1] + tol_distance)):
+                break
+
+            if (new_state[0] == 0):
+                assert(0)
+
+            elif(new_state[0]<(p2.state[0]-tol_distance) and new_state[1]<(p2.state[1]-tol_distance)):
+                fractional_dt *= 0.5
+                dt -= fractional_dt
+            elif(new_state[0]>(p2.state[0]+tol_distance) and new_state[1]>(p2.state[1]-tol_distance)):
+                fractional_dt *= 0.5
+                dt += fractional_dt
+
+            self.solver.set_initial_value(s0, t0)
+            new_state = self.solver.integrate(t0+dt)
+            print(new_state)
+
+        return [0, -1*new_state[1]], t
             
 
     def close_pass(self, p2):
@@ -107,8 +137,8 @@ class Player():
 
 
     def stay_in_area(self, x_min, x_max, y_min, y_max):
-        if self.x - self.radius < x_min:
-            self.x = self.radius
+        if self.state[0] - self.radius < x_min:
+            self.state[0] = self.radius
             self.state[2] = 2
             self.state[3] = 2
             self.state[3] *= -1
@@ -135,9 +165,17 @@ class Player():
 
     def fight(self, p2):
         fight_area_x_min = self.x - 20
+        if(fight_area_x_min < 0):
+            fight_area_x_min = 0
         fight_area_x_max = self.x + 20
+        if(fight_area_x_max > WIDTH):
+            fight_area_x_max = WIDTH
         fight_area_y_min = self.y - 20
+        if(fight_area_y_min < 0):
+            fight_area_y_min = 0
         fight_area_y_max = self.y + 20
+        if(fight_area_y_max > HEIGHT):
+            fight_area_y_max = HEIGHT
 
         self.stay_in_area(fight_area_x_min, fight_area_x_max, fight_area_y_min, fight_area_y_max)
         if self.check_collision(p2):
@@ -146,7 +184,7 @@ class Player():
             pass
 
 
-    def track(self, p1, p2):
+    def track(self, p2):
         if(self.close_pass(p2)):
             self.fight(p2)
 
@@ -164,6 +202,8 @@ def Main():
     #players setup
     player1 = Player()
     player2 = Player()
+
+    player1.setup(player2)
 
     while True:
         clock.tick(30)
