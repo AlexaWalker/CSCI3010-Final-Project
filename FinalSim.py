@@ -129,7 +129,7 @@ class Player():
             new_state = self.solver.integrate(t0+dt)
             print(new_state)
 
-        return [0, -1*new_state[1]], t
+        return [new_state[0], new_state[1]], time
             
 
     def close_pass(self, p2):
